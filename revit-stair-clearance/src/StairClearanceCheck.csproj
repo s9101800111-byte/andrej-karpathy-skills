@@ -4,7 +4,6 @@
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
-    <UseWindowsForms>true</UseWindowsForms>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <!-- 對應的 Revit 版本,可用 dotnet build -p:RevitVersion=2023 覆寫(支援 2021~2024) -->
@@ -16,6 +15,11 @@
          若想改參考本機 Revit 安裝目錄的 RevitAPI.dll / RevitAPIUI.dll 也可以 -->
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" />
+
+    <!-- 輸入對話框使用 WinForms。直接引用 net48 參考組件中的 WinForms/Drawing,
+         不啟用 UseWindowsForms,以便在非 Windows 環境也能用 dotnet SDK 編譯。 -->
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
 
 </Project>
