@@ -1,13 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
-    <!-- 對應的 Revit 版本,可用 dotnet build -p:RevitVersion=2023 覆寫(支援 2021~2024) -->
+    <!-- 對應的 Revit 版本,可用 dotnet build -p:RevitVersion=2026 覆寫(支援 2021~2026) -->
     <RevitVersion Condition="'$(RevitVersion)' == ''">2024</RevitVersion>
+  </PropertyGroup>
+
+  <!-- Revit 2025+ 改用 .NET 8;2024 以前為 .NET Framework 4.8 -->
+  <PropertyGroup Condition="$(RevitVersion) &gt;= 2025">
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 允許在非 Windows 上還原 WindowsDesktop 目標套件以完成跨平台編譯。
+         不用 UseWindowsForms(會觸發本機缺少的 WindowsDesktop SDK),
+         改以 FrameworkReference 直接引用 WinForms。 -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(RevitVersion) &lt; 2025">
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Revit 2024 起 ElementId 改用 long 的 Value(IntegerValue 於 2025 移除) -->
+  <PropertyGroup Condition="$(RevitVersion) &gt;= 2024">
+    <DefineConstants>$(DefineConstants);REVIT2024_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,11 +31,17 @@
          若想改參考本機 Revit 安裝目錄的 RevitAPI.dll / RevitAPIUI.dll 也可以 -->
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" />
+  </ItemGroup>
 
-    <!-- 輸入對話框使用 WinForms。直接引用 net48 參考組件中的 WinForms/Drawing,
-         不啟用 UseWindowsForms,以便在非 Windows 環境也能用 dotnet SDK 編譯。 -->
+  <!-- net48 不啟用 UseWindowsForms(會觸發 Windows 專屬 SDK),改直接引用參考組件,
+       讓非 Windows 環境也能用 dotnet SDK 編譯。net8 則由 UseWindowsForms 處理。 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
 
 </Project>

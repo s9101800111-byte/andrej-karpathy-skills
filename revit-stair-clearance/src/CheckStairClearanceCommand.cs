@@ -5,6 +5,8 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
+// net8 的 WinForms 也有 TaskDialog,明確指向 Revit 的版本避免衝突
+using TaskDialog = Autodesk.Revit.UI.TaskDialog;
 
 namespace StairClearanceCheck
 {
@@ -138,14 +140,24 @@ namespace StairClearanceCheck
             Element obstruction = doc.GetElement(violation.ObstructionId);
             string obstructionName = obstruction == null
                 ? "(未知元件)"
-                : $"{obstruction.Category?.Name}「{obstruction.Name}」(Id {violation.ObstructionId.IntegerValue})";
+                : $"{obstruction.Category?.Name}「{obstruction.Name}」(Id {IdValue(violation.ObstructionId)})";
 
             double clearanceMm = UnitUtils.ConvertFromInternalUnits(violation.Clearance, UnitTypeId.Millimeters);
             double xMeters = UnitUtils.ConvertFromInternalUnits(violation.Location.X, UnitTypeId.Meters);
             double yMeters = UnitUtils.ConvertFromInternalUnits(violation.Location.Y, UnitTypeId.Meters);
 
-            return $"樓梯「{violation.Stair.Name}」(Id {violation.Stair.Id.IntegerValue})上方 {obstructionName}:"
+            return $"樓梯「{violation.Stair.Name}」(Id {IdValue(violation.Stair.Id)})上方 {obstructionName}:"
                  + $"淨高僅 {clearanceMm:0} mm,位置 ({xMeters:0.00}, {yMeters:0.00}) m";
+        }
+
+        /// <summary>取得 ElementId 的數值。Revit 2024 起改用 long 的 Value;之前為 int 的 IntegerValue。</summary>
+        private static long IdValue(ElementId id)
+        {
+#if REVIT2024_OR_GREATER
+            return id.Value;
+#else
+            return id.IntegerValue;
+#endif
         }
     }
 }

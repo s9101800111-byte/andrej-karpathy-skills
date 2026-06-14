@@ -33,11 +33,14 @@ Revit 外部命令(`IExternalCommand`):執行後輸入最小淨高要求,自動�
 
 ```
 cd src
-dotnet build -c Release                    # 預設對應 Revit 2024
-dotnet build -c Release -p:RevitVersion=2022   # 其他版本(支援 2021~2024)
+dotnet build -c Release                       # 預設對應 Revit 2024
+dotnet build -c Release -p:RevitVersion=2022  # 舊版(.NET Framework 4.8)
+dotnet build -c Release -p:RevitVersion=2026  # 新版(.NET 8)
 ```
 
-> Revit 2025 以後改用 .NET 8,需將 `TargetFramework` 改為 `net8.0-windows`。
+`RevitVersion` 會自動切換目標框架與相依:2024 以前用 net48,2025/2026 用
+`net8.0-windows`。支援 2021~2026。csproj 已調整為可在非 Windows 環境(含本專案的
+Linux CI/容器)以 `dotnet` SDK 直接編譯出可在 Revit 使用的 DLL。
 
 ## 安裝
 
@@ -45,7 +48,7 @@ dotnet build -c Release -p:RevitVersion=2022   # 其他版本(支援 2021~2024)
 一起複製到:
 
 ```
-%AppData%\Autodesk\Revit\Addins\2024\
+%AppData%\Autodesk\Revit\Addins\<版本>\      # 例如 2024 或 2026
 ```
 
 重新啟動 Revit,指令會出現在「增益集 → 外部工具」。
