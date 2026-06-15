@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Name>樓梯淨高檢核</Name>
+    <Text>樓梯淨高檢核</Text>
+    <Description>檢核樓梯上方物件與踏面/平台之間的淨高是否低於設定值。</Description>
+    <!-- 若 DLL 不在本 .addin 檔同層,請改為完整路徑 -->
+    <Assembly>StairClearanceCheck.dll</Assembly>
+    <FullClassName>StairClearanceCheck.CheckStairClearanceCommand</FullClassName>
+    <AddInId>8bdb731a-33f1-4a8f-83c4-419e4a7e3606</AddInId>
+    <VendorId>SCCK</VendorId>
+    <VendorDescription>Stair Clearance Check</VendorDescription>
+  </AddIn>
+</RevitAddIns>
