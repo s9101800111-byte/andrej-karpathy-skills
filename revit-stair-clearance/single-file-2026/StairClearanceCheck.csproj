@@ -15,8 +15,8 @@
     <!-- Revit API 參考(NuGet,免裝 Revit 即可編譯) -->
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="2026.*" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="2026.*" />
-    <!-- 輸入對話框用的 WinForms -->
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <!-- WPF 介面(以程式碼建構視窗,不需 XAML 編譯,故不啟用 UseWPF) -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
   </ItemGroup>
 
 </Project>

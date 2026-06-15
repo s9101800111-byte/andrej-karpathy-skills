@@ -1,16 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
-// 單檔同時用到 Revit 與 WinForms,以下別名消除同名型別衝突
-using TaskDialog = Autodesk.Revit.UI.TaskDialog;
-using Form = System.Windows.Forms.Form;
-using TextBox = System.Windows.Forms.TextBox;
-using Control = System.Windows.Forms.Control;
+using StairClearanceCheck.UI;
 
 namespace StairClearanceCheck
 {
@@ -19,6 +13,9 @@ namespace StairClearanceCheck
     {
         /// <summary>被檢核的樓梯。</summary>
         public Stairs Stair { get; set; }
+
+        /// <summary>樓梯所屬樓層名稱。</summary>
+        public string LevelName { get; set; }
 
         /// <summary>上方障礙物的元件 Id。</summary>
         public ElementId ObstructionId { get; set; }
@@ -38,7 +35,6 @@ namespace StairClearanceCheck
     /// </summary>
     public class StairClearanceChecker
     {
-        private readonly Document _doc;
         private readonly View3D _view3D;
         private readonly double _minClearance; // 內部單位(英呎)
         private readonly double _spacing;      // 檢測點間距,內部單位(英呎)
@@ -49,16 +45,15 @@ namespace StairClearanceCheck
         /// <summary>法向量 Z 分量門檻,超過才視為「朝上」的面(踏面、平台面)。</summary>
         private const double MinUpwardNormalZ = 0.7;
 
-        public StairClearanceChecker(Document doc, View3D view3D, double minClearance, double spacing)
+        public StairClearanceChecker(View3D view3D, double minClearance, double spacing)
         {
-            _doc = doc;
             _view3D = view3D;
             _minClearance = minClearance;
             _spacing = spacing;
         }
 
         /// <summary>檢核單一樓梯,回傳每個障礙物的最小淨高違規(每個障礙物只記最差一筆)。</summary>
-        public IList<ClearanceViolation> Check(Stairs stair)
+        public IList<ClearanceViolation> Check(Stairs stair, string levelName)
         {
             // 排除樓梯自身構件(梯段、平台、支撐)與其扶手,避免射線打到自己造成誤判
             var excludeIds = new List<ElementId> { stair.Id };
@@ -90,6 +85,7 @@ namespace StairClearanceCheck
                     worstPerObstruction[obstructionId] = new ClearanceViolation
                     {
                         Stair = stair,
+                        LevelName = levelName,
                         ObstructionId = obstructionId,
                         Clearance = clearance,
                         Location = point,
@@ -135,8 +131,8 @@ namespace StairClearanceCheck
 
             // 平面的 UV 參數與模型長度同尺度,可直接以間距切分;
             // 至少切 1 格,確保窄踏面也有檢測點
-            int countU = Math.Max(1, (int)Math.Ceiling(spanU / _spacing));
-            int countV = Math.Max(1, (int)Math.Ceiling(spanV / _spacing));
+            int countU = System.Math.Max(1, (int)System.Math.Ceiling(spanU / _spacing));
+            int countV = System.Math.Max(1, (int)System.Math.Ceiling(spanV / _spacing));
 
             for (int i = 0; i <= countU; i++)
             {
@@ -157,64 +153,11 @@ namespace StairClearanceCheck
         }
     }
 
-    /// <summary>輸入最小淨高要求與檢測點間距的對話框。</summary>
-    public class ClearanceInputForm : Form
-    {
-        private readonly TextBox _clearanceBox;
-        private readonly TextBox _spacingBox;
-
-        /// <summary>最小淨高要求(mm)。</summary>
-        public double MinClearanceMm { get; private set; }
-
-        /// <summary>檢測點間距(mm)。</summary>
-        public double SampleSpacingMm { get; private set; }
-
-        public ClearanceInputForm()
-        {
-            Text = "樓梯淨高檢核";
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterScreen;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            ClientSize = new System.Drawing.Size(290, 125);
-
-            var clearanceLabel = new Label { Text = "最小淨高要求 (mm):", Left = 12, Top = 16, Width = 145 };
-            _clearanceBox = new TextBox { Left = 165, Top = 13, Width = 110, Text = "1900" };
-
-            var spacingLabel = new Label { Text = "檢測點間距 (mm):", Left = 12, Top = 46, Width = 145 };
-            _spacingBox = new TextBox { Left = 165, Top = 43, Width = 110, Text = "300" };
-
-            var okButton = new Button { Text = "開始檢核", Left = 70, Top = 85, Width = 95, DialogResult = DialogResult.OK };
-            var cancelButton = new Button { Text = "取消", Left = 180, Top = 85, Width = 95, DialogResult = DialogResult.Cancel };
-            okButton.Click += OnOkClicked;
-
-            Controls.AddRange(new Control[] { clearanceLabel, _clearanceBox, spacingLabel, _spacingBox, okButton, cancelButton });
-            AcceptButton = okButton;
-            CancelButton = cancelButton;
-        }
-
-        private void OnOkClicked(object sender, EventArgs e)
-        {
-            if (!double.TryParse(_clearanceBox.Text, out double clearance) || clearance <= 0
-                || !double.TryParse(_spacingBox.Text, out double spacing) || spacing <= 0)
-            {
-                MessageBox.Show("請輸入大於 0 的數值。", "樓梯淨高檢核",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                DialogResult = DialogResult.None; // 留在對話框讓使用者修正
-                return;
-            }
-
-            MinClearanceMm = clearance;
-            SampleSpacingMm = spacing;
-        }
-    }
-
     /// <summary>
     /// 樓梯淨高檢核指令:
-    /// 1. 讓使用者輸入最小淨高要求
-    /// 2. 在樓梯踏面/平台頂面佈點,垂直向上射線找出上方障礙物
-    /// 3. 淨高不足者列入報告並加入選取集
+    /// 1. WPF 視窗讓使用者複選樓層、輸入最小淨高與檢測點間距(單位 cm)
+    /// 2. 在所選樓層的樓梯踏面/平台頂面佈點,垂直向上射線找出上方障礙物
+    /// 3. 列出所有淨高不足的物件 Id,並在視圖中亮顯(選取)
     /// </summary>
     [Transaction(TransactionMode.Manual)]
     public class CheckStairClearanceCommand : IExternalCommand
@@ -224,31 +167,49 @@ namespace StairClearanceCheck
             UIDocument uidoc = commandData.Application.ActiveUIDocument;
             Document doc = uidoc.Document;
 
-            // 1. 取得使用者輸入
-            double minClearanceMm, spacingMm;
-            using (var form = new ClearanceInputForm())
-            {
-                if (form.ShowDialog() != DialogResult.OK)
-                    return Result.Cancelled;
-                minClearanceMm = form.MinClearanceMm;
-                spacingMm = form.SampleSpacingMm;
-            }
-
-            // 2. 決定檢核範圍:有預選樓梯就只檢核預選,否則檢核全模型的樓梯
-            List<Stairs> stairs = uidoc.Selection.GetElementIds()
-                .Select(id => doc.GetElement(id))
-                .OfType<Stairs>()
+            // 1. 收集模型中所有樓梯,並依「底部樓層」分組
+            List<Stairs> allStairs = new FilteredElementCollector(doc)
+                .OfClass(typeof(Stairs))
+                .Cast<Stairs>()
                 .ToList();
-            if (stairs.Count == 0)
-            {
-                stairs = new FilteredElementCollector(doc)
-                    .OfClass(typeof(Stairs))
-                    .Cast<Stairs>()
-                    .ToList();
-            }
-            if (stairs.Count == 0)
+            if (allStairs.Count == 0)
             {
                 TaskDialog.Show("樓梯淨高檢核", "模型中找不到樓梯。");
+                return Result.Succeeded;
+            }
+
+            // 樓層 Id -> 樓層名稱(只列出含樓梯的樓層,依高程排序)
+            var levelOptions = allStairs
+                .Select(s => GetBaseLevelId(s))
+                .Where(id => id != ElementId.InvalidElementId)
+                .Distinct()
+                .Select(id => doc.GetElement(id) as Level)
+                .Where(l => l != null)
+                .OrderBy(l => l.Elevation)
+                .Select(l => (Id: l.Id.Value, Name: l.Name))
+                .ToList();
+            if (levelOptions.Count == 0)
+            {
+                TaskDialog.Show("樓梯淨高檢核", "找不到任何含樓梯的樓層。");
+                return Result.Succeeded;
+            }
+
+            // 2. WPF 輸入視窗(樓層複選 + cm 數值)
+            var window = new ClearanceInputWindow(levelOptions);
+            new System.Windows.Interop.WindowInteropHelper(window)
+            {
+                Owner = commandData.Application.MainWindowHandle,
+            };
+            if (window.ShowDialog() != true)
+                return Result.Cancelled;
+
+            var selectedLevelIds = new HashSet<long>(window.SelectedLevelIds);
+            List<Stairs> stairsToCheck = allStairs
+                .Where(s => selectedLevelIds.Contains(GetBaseLevelId(s).Value))
+                .ToList();
+            if (stairsToCheck.Count == 0)
+            {
+                TaskDialog.Show("樓梯淨高檢核", "所選樓層沒有樓梯可檢核。");
                 return Result.Succeeded;
             }
 
@@ -277,14 +238,17 @@ namespace StairClearanceCheck
                 tempViewId = view3D.Id;
             }
 
-            // 4. 執行檢核
-            double minClearance = UnitUtils.ConvertToInternalUnits(minClearanceMm, UnitTypeId.Millimeters);
-            double spacing = UnitUtils.ConvertToInternalUnits(spacingMm, UnitTypeId.Millimeters);
-            var checker = new StairClearanceChecker(doc, view3D, minClearance, spacing);
+            // 4. 執行檢核(cm -> 內部單位)
+            double minClearance = UnitUtils.ConvertToInternalUnits(window.MinClearanceCm, UnitTypeId.Centimeters);
+            double spacing = UnitUtils.ConvertToInternalUnits(window.SpacingCm, UnitTypeId.Centimeters);
+            var checker = new StairClearanceChecker(view3D, minClearance, spacing);
 
             var violations = new List<ClearanceViolation>();
-            foreach (Stairs stair in stairs)
-                violations.AddRange(checker.Check(stair));
+            foreach (Stairs stair in stairsToCheck)
+            {
+                string levelName = GetLevelName(doc, stair);
+                violations.AddRange(checker.Check(stair, levelName));
+            }
 
             // 5. 清掉暫存視圖
             if (tempViewId != ElementId.InvalidElementId)
@@ -297,42 +261,43 @@ namespace StairClearanceCheck
                 }
             }
 
-            // 6. 顯示結果
-            ShowResults(uidoc, stairs.Count, minClearanceMm, violations);
+            // 6. 在視圖中亮顯不符物件,並列出結果
+            ShowResults(uidoc, commandData, stairsToCheck.Count, window.MinClearanceCm, violations);
             return Result.Succeeded;
         }
 
+        /// <summary>在當前視圖選取(亮顯)不符物件,並用 WPF 視窗列出清單。</summary>
         private static void ShowResults(
-            UIDocument uidoc, int stairCount, double minClearanceMm, List<ClearanceViolation> violations)
+            UIDocument uidoc, ExternalCommandData commandData,
+            int stairCount, double minClearanceCm, List<ClearanceViolation> violations)
         {
-            var dialog = new TaskDialog("樓梯淨高檢核結果") { TitleAutoPrefix = false };
+            List<ElementId> obstructionIds = violations
+                .Select(v => v.ObstructionId)
+                .Distinct()
+                .ToList();
 
-            if (violations.Count == 0)
+            if (obstructionIds.Count > 0)
             {
-                dialog.MainInstruction =
-                    $"檢核通過:{stairCount} 座樓梯上方淨高皆不小於 {minClearanceMm:0} mm。";
-            }
-            else
-            {
-                dialog.MainInstruction =
-                    $"發現 {violations.Count} 處淨高不足(要求不小於 {minClearanceMm:0} mm)";
-
-                const int maxLines = 30;
-                IEnumerable<string> lines = violations
-                    .OrderBy(v => v.Clearance)
-                    .Select(v => Describe(uidoc.Document, v));
-                dialog.MainContent = string.Join("\n", lines.Take(maxLines));
-                if (violations.Count > maxLines)
-                    dialog.MainContent += $"\n…其餘 {violations.Count - maxLines} 筆省略";
-
-                dialog.FooterText = "淨高不足的障礙物已加入目前選取集。";
-
-                // 把違規障礙物選起來,方便使用者直接定位
-                uidoc.Selection.SetElementIds(
-                    violations.Select(v => v.ObstructionId).Distinct().ToList());
+                // 選取 = 在視圖中亮顯;並把視圖縮放到這些物件
+                uidoc.Selection.SetElementIds(obstructionIds);
+                uidoc.ShowElements(obstructionIds);
             }
 
-            dialog.Show();
+            string header = violations.Count == 0
+                ? $"檢核通過:{stairCount} 座樓梯上方淨高皆不小於 {minClearanceCm:0.#} cm。"
+                : $"發現 {violations.Count} 處淨高不足(要求不小於 {minClearanceCm:0.#} cm),已在視圖中亮顯。";
+
+            List<string> lines = violations
+                .OrderBy(v => v.Clearance)
+                .Select(v => Describe(uidoc.Document, v))
+                .ToList();
+
+            var window = new ResultsWindow(header, lines);
+            new System.Windows.Interop.WindowInteropHelper(window)
+            {
+                Owner = commandData.Application.MainWindowHandle,
+            };
+            window.ShowDialog();
         }
 
         private static string Describe(Document doc, ClearanceViolation violation)
@@ -342,12 +307,183 @@ namespace StairClearanceCheck
                 ? "(未知元件)"
                 : $"{obstruction.Category?.Name}「{obstruction.Name}」(Id {violation.ObstructionId.Value})";
 
-            double clearanceMm = UnitUtils.ConvertFromInternalUnits(violation.Clearance, UnitTypeId.Millimeters);
+            double clearanceCm = UnitUtils.ConvertFromInternalUnits(violation.Clearance, UnitTypeId.Centimeters);
             double xMeters = UnitUtils.ConvertFromInternalUnits(violation.Location.X, UnitTypeId.Meters);
             double yMeters = UnitUtils.ConvertFromInternalUnits(violation.Location.Y, UnitTypeId.Meters);
 
-            return $"樓梯「{violation.Stair.Name}」(Id {violation.Stair.Id.Value})上方 {obstructionName}:"
-                 + $"淨高僅 {clearanceMm:0} mm,位置 ({xMeters:0.00}, {yMeters:0.00}) m";
+            return $"[{violation.LevelName}] 樓梯「{violation.Stair.Name}」(Id {violation.Stair.Id.Value}) "
+                 + $"← 障礙物 {obstructionName}:淨高僅 {clearanceCm:0.0} cm,"
+                 + $"位置 ({xMeters:0.00}, {yMeters:0.00}) m";
+        }
+
+        /// <summary>樓梯的底部樓層 Id(取不到時退回 Element.LevelId)。</summary>
+        private static ElementId GetBaseLevelId(Stairs stair)
+        {
+            Parameter p = stair.get_Parameter(BuiltInParameter.STAIRS_BASE_LEVEL_PARAM);
+            ElementId id = p?.AsElementId() ?? ElementId.InvalidElementId;
+            return id != ElementId.InvalidElementId ? id : stair.LevelId;
+        }
+
+        private static string GetLevelName(Document doc, Stairs stair)
+        {
+            return (doc.GetElement(GetBaseLevelId(stair)) as Level)?.Name ?? "(無樓層)";
+        }
+    }
+}
+
+namespace StairClearanceCheck.UI
+{
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Windows;
+    using System.Windows.Controls;
+
+    /// <summary>樓層複選 + cm 數值輸入的 WPF 視窗(以程式碼建構,無 XAML)。</summary>
+    public class ClearanceInputWindow : Window
+    {
+        private readonly List<(long Id, CheckBox Box)> _levelBoxes = new List<(long, CheckBox)>();
+        private readonly TextBox _clearanceBox;
+        private readonly TextBox _spacingBox;
+
+        /// <summary>使用者勾選的樓層 Id。</summary>
+        public List<long> SelectedLevelIds { get; private set; } = new List<long>();
+
+        /// <summary>最小淨高要求(cm)。</summary>
+        public double MinClearanceCm { get; private set; }
+
+        /// <summary>檢測點間距(cm)。</summary>
+        public double SpacingCm { get; private set; }
+
+        public ClearanceInputWindow(IEnumerable<(long Id, string Name)> levels)
+        {
+            Title = "樓梯淨高檢核";
+            Width = 340;
+            SizeToContent = SizeToContent.Height;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            ResizeMode = ResizeMode.NoResize;
+
+            var root = new StackPanel { Margin = new Thickness(14) };
+
+            root.Children.Add(new TextBlock
+            {
+                Text = "選擇樓層(可複選):",
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 6),
+            });
+
+            var selectAll = new CheckBox { Content = "全選 / 全不選", IsChecked = true, Margin = new Thickness(0, 0, 0, 4) };
+            selectAll.Checked += (s, e) => SetAll(true);
+            selectAll.Unchecked += (s, e) => SetAll(false);
+            root.Children.Add(selectAll);
+
+            var levelPanel = new StackPanel();
+            foreach (var lv in levels)
+            {
+                var box = new CheckBox { Content = lv.Name, IsChecked = true, Margin = new Thickness(14, 2, 0, 2) };
+                _levelBoxes.Add((lv.Id, box));
+                levelPanel.Children.Add(box);
+            }
+            root.Children.Add(new ScrollViewer
+            {
+                Content = levelPanel,
+                MaxHeight = 220,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Margin = new Thickness(0, 0, 0, 10),
+            });
+
+            root.Children.Add(new TextBlock { Text = "最小淨高 (cm):", Margin = new Thickness(0, 4, 0, 2) });
+            _clearanceBox = new TextBox { Text = "190" };
+            root.Children.Add(_clearanceBox);
+
+            root.Children.Add(new TextBlock { Text = "檢測點間距 (cm):", Margin = new Thickness(0, 8, 0, 2) });
+            _spacingBox = new TextBox { Text = "30" };
+            root.Children.Add(_spacingBox);
+
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 14, 0, 0),
+            };
+            var ok = new Button { Content = "開始檢核", Width = 90, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
+            var cancel = new Button { Content = "取消", Width = 70, IsCancel = true };
+            ok.Click += OnOk;
+            buttons.Children.Add(ok);
+            buttons.Children.Add(cancel);
+            root.Children.Add(buttons);
+
+            Content = root;
+        }
+
+        private void SetAll(bool value)
+        {
+            foreach (var (_, box) in _levelBoxes)
+                box.IsChecked = value;
+        }
+
+        private void OnOk(object sender, RoutedEventArgs e)
+        {
+            var selected = _levelBoxes.Where(x => x.Box.IsChecked == true).Select(x => x.Id).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("請至少選擇一個樓層。", "樓梯淨高檢核", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (!double.TryParse(_clearanceBox.Text, out double clearance) || clearance <= 0
+                || !double.TryParse(_spacingBox.Text, out double spacing) || spacing <= 0)
+            {
+                MessageBox.Show("請輸入大於 0 的數值。", "樓梯淨高檢核", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            SelectedLevelIds = selected;
+            MinClearanceCm = clearance;
+            SpacingCm = spacing;
+            DialogResult = true;
+        }
+    }
+
+    /// <summary>檢核結果清單視窗(可捲動、可複製文字)。</summary>
+    public class ResultsWindow : Window
+    {
+        public ResultsWindow(string header, IEnumerable<string> lines)
+        {
+            Title = "樓梯淨高檢核結果";
+            Width = 600;
+            Height = 440;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+            var root = new DockPanel { Margin = new Thickness(14) };
+
+            var head = new TextBlock
+            {
+                Text = header,
+                FontWeight = FontWeights.Bold,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 10),
+            };
+            DockPanel.SetDock(head, Dock.Top);
+            root.Children.Add(head);
+
+            var close = new Button
+            {
+                Content = "關閉",
+                Width = 80,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0),
+                IsDefault = true,
+                IsCancel = true,
+            };
+            close.Click += (s, e) => Close();
+            DockPanel.SetDock(close, Dock.Bottom);
+            root.Children.Add(close);
+
+            var list = new ListBox { SelectionMode = SelectionMode.Extended };
+            foreach (var line in lines)
+                list.Items.Add(line);
+            root.Children.Add(list);
+
+            Content = root;
         }
     }
 }
