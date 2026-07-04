@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Revit 2026 執行於 .NET 8 -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Revit API NuGet 套件（Nice3point 官方鏡像，CopyLocal 已自動設為 false）-->
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="2026.*" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="2026.*" />
+  </ItemGroup>
+
+  <!--
+    若無法使用 NuGet，可改用本機參考（移除上方 PackageReference 後取消下方註解）：
+    <ItemGroup>
+      <Reference Include="RevitAPI">
+        <HintPath>C:\Program Files\Autodesk\Revit 2026\RevitAPI.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
+      <Reference Include="RevitAPIUI">
+        <HintPath>C:\Program Files\Autodesk\Revit 2026\RevitAPIUI.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
+    </ItemGroup>
+  -->
+
+</Project>

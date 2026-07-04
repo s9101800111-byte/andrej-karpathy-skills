@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>RevitAutoAnnotation</Name>
+    <Assembly>RevitAutoAnnotation\RevitAutoAnnotation.dll</Assembly>
+    <AddInId>8F4C2A5E-1B3D-4E6F-9A7C-2D5E8B1F4A63</AddInId>
+    <FullClassName>RevitAutoAnnotation.App</FullClassName>
+    <VendorId>AUTO</VendorId>
+    <VendorDescription>Auto Annotation Add-in for construction drawings</VendorDescription>
+  </AddIn>
+</RevitAddIns>
