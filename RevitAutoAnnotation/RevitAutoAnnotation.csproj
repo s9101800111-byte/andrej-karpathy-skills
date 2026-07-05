@@ -3,22 +3,56 @@
   <PropertyGroup>
     <!-- Revit 2026 執行於 .NET 8 -->
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- 允許在非 Windows 環境（CI / Linux）交叉建置 net8.0-windows 目標 -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Revit API NuGet 套件（Nice3point 官方鏡像，CopyLocal 已自動設為 false）-->
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="2026.*" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="2026.*" />
+
+    <!--
+      WPF 參考組件：UI 以純 C# 建構（不用 XAML），因此不需 UseWPF／WindowsDesktop SDK，
+      直接參考 targeting pack 即可，任何平台都能建置。執行時由 Revit 的 .NET 8 桌面框架提供。
+    -->
+    <PackageReference Include="Microsoft.WindowsDesktop.App.Ref" Version="8.0.0" GeneratePathProperty="true" ExcludeAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="WindowsBase">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\WindowsBase.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PresentationCore">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\PresentationCore.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PresentationFramework">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\PresentationFramework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Xaml">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\System.Xaml.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UIAutomationTypes">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\UIAutomationTypes.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UIAutomationProvider">
+      <HintPath>$(PkgMicrosoft_WindowsDesktop_App_Ref)\ref\net8.0\UIAutomationProvider.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <!--
-    若無法使用 NuGet，可改用本機參考（移除上方 PackageReference 後取消下方註解）：
+    若無法使用 NuGet，可改用本機參考（移除上方 Nice3point PackageReference 後取消下方註解）：
     <ItemGroup>
       <Reference Include="RevitAPI">
         <HintPath>C:\Program Files\Autodesk\Revit 2026\RevitAPI.dll</HintPath>

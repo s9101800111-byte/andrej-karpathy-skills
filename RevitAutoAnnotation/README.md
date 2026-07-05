@@ -32,15 +32,15 @@ RevitAutoAnnotation/
 │   ├── ColumnLayoutService.cs      # 柱位放樣
 │   └── BeamLocationService.cs      # 梁定位
 ├── UI/
-│   ├── AnnotationWindow.xaml       # WPF 面板
-│   └── AnnotationWindow.xaml.cs
+│   └── AnnotationWindow.cs         # WPF 面板（純 C# 建構 UI，免 XAML 編譯）
 ├── RevitAutoAnnotation.csproj
 └── RevitAutoAnnotation.addin       # Revit 外掛清單
 ```
 
-## 建置（需 Windows）
+## 建置
 
-需求：Windows、.NET 8 SDK、Visual Studio 2022（或直接用 dotnet CLI）、Revit 2026。
+需求：.NET 8 SDK（Windows / Linux / macOS 皆可建置；UI 為純 C# WPF 且已設定
+`EnableWindowsTargeting`，因此不限 Windows）。執行仍需 Windows + Revit 2026。
 
 ```powershell
 cd RevitAutoAnnotation
@@ -85,4 +85,4 @@ Revit API 參考預設用 NuGet 套件 `Nice3point.Revit.Api.RevitAPI / RevitAPI
 1. 在 `AnnotationMode` 加一個列舉值。
 2. 在 `Services/` 新增一個 `XxxService.Annotate(doc, view, settings)`。
 3. 在 `AnnotationRequestHandler.Execute` 的 switch 加一行分派。
-4. 在 `AnnotationWindow.xaml` 加一個 RadioButton。
+4. 在 `AnnotationWindow.cs` 建構式加一個 RadioButton。
