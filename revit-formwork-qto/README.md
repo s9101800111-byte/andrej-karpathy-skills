@@ -29,7 +29,13 @@
 - 面上的開口（門窗）已自動從面積中扣除；「小開口不予扣除（回加）」規則尚未實作。
 - 元件以**底部高程**歸屬樓層（梁版的支撐架設於下方樓層工作面的慣例）。
 
-## 建置與安裝
+## 安裝方式一：直接安裝（不需建置）
+
+`dist/` 資料夾內已附編譯好的 `FormworkQTO.dll`。
+對 `dist/install.bat` 按右鍵→執行，會自動把 DLL 與 .addin 複製到
+`%AppData%\Autodesk\Revit\Addins\2026\`，重開 Revit 即可。
+
+## 安裝方式二：從原始碼建置
 
 需求：Visual Studio 2022（或 .NET 8 SDK）＋ Revit 2026。
 

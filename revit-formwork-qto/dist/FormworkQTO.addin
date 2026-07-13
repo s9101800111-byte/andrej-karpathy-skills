@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Name>計算模板面積</Name>
+    <Text>計算模板面積</Text>
+    <Description>計算全模型結構元件的側模與底模面積，寫回共用參數並匯出 CSV。</Description>
+    <Assembly>FormworkQTO.dll</Assembly>
+    <FullClassName>FormworkQTO.Commands.CalculateFormworkCommand</FullClassName>
+    <AddInId>058b2735-3643-4247-9605-4257ddc042e1</AddInId>
+    <VendorId>FQTO</VendorId>
+    <VendorDescription>Formwork QTO Add-in</VendorDescription>
+  </AddIn>
+  <AddIn Type="Command">
+    <Name>模板面積視覺化</Name>
+    <Text>模板面積視覺化</Text>
+    <Description>將選取元件的模板面以 DirectShape 顯示（藍色＝側模、紅色＝底模），用於人工驗證。</Description>
+    <Assembly>FormworkQTO.dll</Assembly>
+    <FullClassName>FormworkQTO.Commands.VisualizeFormworkCommand</FullClassName>
+    <AddInId>8b69f894-1f43-409d-8d5f-aa78469423b8</AddInId>
+    <VendorId>FQTO</VendorId>
+    <VendorDescription>Formwork QTO Add-in</VendorDescription>
+  </AddIn>
+</RevitAddIns>
